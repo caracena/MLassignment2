@@ -38,9 +38,8 @@ class HandwritingPredictor:
         allData = pd.read_csv(name,header=None,sep=" ")
         X = allData.ix[:,:255]
         y = allData.ix[:,256:265]
-        y_labels = []
         y_labels = [(row[row == 1].index[0] - 256) for index, row in y.iterrows()]
-        return X,y_labels
+        return X, y_labels, y
 
     def predict(self,classifier,X,y,folds=10):
         #Run a cross validation on the give classifier.

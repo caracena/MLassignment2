@@ -8,6 +8,7 @@ from keras.utils import np_utils
 import  pandas as pd
 import sklearn.cross_validation as cross_validation
 import matplotlib.pyplot as plt
+from keras.optimizers import SGD
 
 batch_size = 10
 nb_classes = 10
@@ -37,7 +38,6 @@ print('X_train shape:', X_train.shape)
 print(X_train.shape[0], 'train samples')
 print(X_test.shape[0], 'test samples')
 
-
 model = Sequential()
 
 model.add(Convolution2D(nb_filters, nb_conv, nb_conv,
@@ -55,6 +55,8 @@ model.add(Activation('relu'))
 model.add(Dropout(0.5))
 model.add(Dense(nb_classes))
 model.add(Activation('softmax'))
+
+model.summary()
 
 model.compile(loss='categorical_crossentropy',
               optimizer='adadelta',

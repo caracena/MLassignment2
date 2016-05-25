@@ -9,7 +9,7 @@ y_labels = [(row[row == 1].index[0] - 256) for index,row in y.iterrows()]
 
 X_train,X_test,y_train,y_test = cross_validation.train_test_split(x, y_labels, test_size=0.33, random_state=42)
 
-tpot = TPOT(generations=100, verbosity=2)
+tpot = TPOT(generations=6, verbosity=2)
 tpot.fit(X_train, y_train)
 print(tpot.score(X_test, y_test))
 tpot.export('tpot_simeion_pipeline.py')
