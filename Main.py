@@ -7,10 +7,12 @@ from sklearn.neighbors import KNeighborsClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
-import time
+import time, logging, operator
 
 # Create a classifier and feed into the predict function. Cross validation will be automatically used
 def main():
+    logging.basicConfig(filename='results.log', level=logging.INFO)
+
     predictor = HandwritingPredictor()
     predictor.loadFiles("semeion.data")
     predictor.displayNumbers()
@@ -103,13 +105,25 @@ def main():
     for params in lda_parameters:
         models['LinearDiscriminantAnalysis', params] = LinearDiscriminantAnalysis(solver=params[0], n_components=params[1])
 
+
+    results_all = {}
+
     for model in models.keys():
         try:
             start = time.time()
-            print('accuracy for model {} with parameters {}: {} in {} secs'.format(
-                model[0],model[1],predictor.predict(models[model]),time.time() - start))
+            results = predictor.predict(models[model])
+            results_all[model] = results
+            print('accuracy for model {}: {} in {} secs'.format(
+                model[0],model[1], results,time.time() - start))
+            logging.info('accuracy for model {}: {} in {} secs'.format(
+                model[0], model[1], results, time.time() - start))
         except:
             print('error with {} and parameters {}'.format(model[0],model[1]))
+
+    sorted_results = sorted(results_all.items(), key=operator.itemgetter(1), reverse = True)
+    print('Top 10 results')
+    sorted_results.take(10,sorted_results.iteritems()).foreach(lambda x : print(x))
+
 
 if __name__ == "__main__":
     main()
