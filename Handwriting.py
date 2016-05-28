@@ -9,16 +9,16 @@ class HandwritingPredictor:
         number = np.where(list == 1)[0][0]
         return number
 
-    def displayNumbers(self):
+    def displayNumbers(self,X,y_labels):
 
         # create matrix for image
         for j in range(10):
-            index = self.y_labels.index(j)
-            img = np.reshape(self.X.ix[index, :].values, (16, 16))
+            index = y_labels.index(j)
+            img = np.reshape(X.ix[index, :].values, (16, 16))
             img = np.concatenate((np.zeros((16, 2)), img), axis=1)
             count = 0
-            for i in range(index+1,self.X.shape[1]):
-                temp = np.reshape(self.X.ix[i, :].values, (16, 16))
+            for i in range(index+1,X.shape[1]):
+                temp = np.reshape(X.ix[i, :].values, (16, 16))
                 img = np.concatenate((img, temp), axis=1)
                 img = np.concatenate((img, np.zeros((16,2))), axis=1)
                 count += 1
@@ -39,12 +39,13 @@ class HandwritingPredictor:
     def loadFiles(self,name):
         # Loading Files
         allData = pd.read_csv(name,header=None,sep=" ")
-        self.X = allData.ix[:,:255]
-        self.y = allData.ix[:,256:265]
-        self.y_labels = [(row[row == 1].index[0] - 256) for index, row in self.y.iterrows()]
+        X = allData.ix[:,:255]
+        y = allData.ix[:,256:265]
+        y_labels = [(row[row == 1].index[0] - 256) for index, row in y.iterrows()]
+        return X,y,y_labels
 
-    def predict(self,classifier,folds=10):
+    def predict(self,classifier,X,y_labels,folds=10):
         #Run a cross validation on the give classifier.
-        scores = cross_val_score(classifier, self.X, self.y_labels, cv=folds, scoring="accuracy");
+        scores = cross_val_score(classifier, X, y_labels, cv=folds, scoring="accuracy")
         return scores.mean()
 
