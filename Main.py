@@ -143,7 +143,7 @@ class Main:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("target", help="execution target (all_multi, all_seq, best or plot image)",
-                        choices=['all_multi', 'all_seq', 'best', 'image'], default='best')
+                        choices=['all_multi', 'all_seq', 'best', 'image'], default='best', nargs='?')
     args = parser.parse_args()
     pr = cProfile.Profile()
 
