@@ -9,7 +9,7 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from sklearn import decomposition
 import pandas as pd
-import time, logging, operator, multiprocessing
+import time, logging, multiprocessing, cProfile, pstats, io
 import sys,argparse
 import os.path
 from joblib import Parallel, delayed
@@ -22,9 +22,16 @@ class Main:
         self.X, self.y, self.y_labels = self.predictor.loadFiles("semeion.data")
 
     # Create a classifier and feed into the predict function. Cross validation will be automatically used
-    def getAllPredictions(self):
+    def getAllPredictions(self, mode = 'multi'):
         logging.basicConfig(filename='results.log', level=logging.INFO)
         #predictor.displayNumbers(X,y_labels)
+
+        ## if mode is multiprocessing, individual algorithms must perform in one job, otherwise joblib library would throw an
+        ## exception. if mode is sequential individual algoritms can perform in parallel
+        if mode == 'multi':
+            n_jobs = 1
+        else:
+            n_jobs = -1
 
         models = []
 
@@ -46,7 +53,7 @@ class Main:
         for params in rf_parameters:
             models.append(['RandomForest', params, RandomForestClassifier(n_estimators=params[0],
                                                                     max_features=params[1],
-                                                                    max_depth=params[2], n_jobs = 1)])
+                                                                    max_depth=params[2], n_jobs = n_jobs)])
 
         ## adaboost configs
         ab_nestimators = [10, 100, 300, 500]
@@ -85,7 +92,7 @@ class Main:
 
         for params in lr_parameters:
             models.append(['LogisticRegression', params,
-                           LogisticRegression(C=params[0], multi_class=params[1])])
+                           LogisticRegression(C=params[0], multi_class=params[1], n_jobs= n_jobs)])
 
         ## KNeighborsClassifier configs
         knn_n_neighbors = [3, 5, 7]
@@ -95,7 +102,7 @@ class Main:
 
         for params in knn_paramters:
             models.append(['KNeighbors', params,
-                           KNeighborsClassifier(n_neighbors=params[0], p=params[1], algorithm=params[2], n_jobs=1)])
+                           KNeighborsClassifier(n_neighbors=params[0], p=params[1], algorithm=params[2], n_jobs= n_jobs)])
 
 
         ## LinearDiscriminantAnalysis configs
@@ -107,10 +114,17 @@ class Main:
             models.append(['LinearDiscriminantAnalysis', params,
                            LinearDiscriminantAnalysis(solver=params[0], n_components=params[1])])
 
-        num_cores = multiprocessing.cpu_count()
-        results = Parallel(n_jobs=num_cores)\
-            (delayed(self.predictor.predict)(models[i][2], self.X, self.y_labels) for i in range(len(models)))
-        results_all = zip(models, results)
+        ## run models in multiprocessing or sequential way
+        results = []
+        if mode == 'multi':
+            num_cores = multiprocessing.cpu_count()
+            results = Parallel(n_jobs=num_cores)\
+                (delayed(self.predictor.predict)(models[i][2], self.X, self.y_labels) for i in range(len(models)))
+            results_all = zip(models, results)
+        else:
+            for i in range(len(models)):
+                results.append(self.predictor.predict(models[i][2], self.X, self.y_labels))
+            results_all = zip(models, results)
 
         sorted_results = sorted(results_all, key= lambda item: item[1], reverse = True)
         [logging.info(x) for x in sorted_results]
@@ -128,20 +142,49 @@ class Main:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("target", help="execution target (all, best or plot image)",choices=['all', 'best', 'image'], default='best')
+    parser.add_argument("target", help="execution target (all_multi, all_seq, best or plot image)",
+                        choices=['all_multi', 'all_seq', 'best', 'image'], default='best')
     args = parser.parse_args()
+    pr = cProfile.Profile()
 
     m = Main()
 
     if args.target == "image":
         m.predictor.displayNumbers(m.X,m.y_labels)
-    if args.target == "all":
-        print("### Running all models")
-        start = time.time()
-        m.getAllPredictions()
-        print('All models run in {} secs'.format(time.time() - start))
 
-    if args.target == "all" or args.target == "best":
+
+    if args.target == "all_multi":
+        print("### Running all models in multiprocessing mode")
+        start = time.time()
+        pr.enable()
+        m.getAllPredictions('multi')
+        pr.disable()
+        print('All models run in {} secs'.format(time.time() - start))
+        s = io.StringIO()
+        sortby = 'cumulative'
+        ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
+        ps.print_stats()
+        with open('profile.log', 'a') as f:
+            f.write('Running all models in multiprocessing mode')
+            f.write(s.getvalue())
+
+    if args.target == "all_seq":
+        print("### Running all models in sequential mode")
+        start = time.time()
+        pr.enable()
+        m.getAllPredictions('seq')
+        pr.disable()
+        print('All models run in {} secs'.format(time.time() - start))
+        s = io.StringIO()
+        sortby = 'cumulative'
+        ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
+        ps.print_stats()
+        with open('profile.log', 'a') as f:
+            f.write('Running all models in sequential mode')
+            f.write(s.getvalue())
+
+
+    if args.target == "best":
         print("### Running 2 best models")
 
         print("### Running SVM model with params (gamma 0.03, C=100)")
