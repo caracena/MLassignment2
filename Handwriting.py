@@ -34,7 +34,7 @@ class HandwritingPredictor:
 
         # Plot image
         plt.imshow(image,cmap=plt.cm.gray_r,interpolation="nearest")
-        plt.show()
+        plt.show(block=True)
 
     def loadFiles(self,name):
         # Loading Files

@@ -10,6 +10,9 @@ from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from sklearn import decomposition
 import pandas as pd
 import time, logging, operator
+import sys,argparse
+import os.path
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
 class Main:
 
@@ -128,53 +131,62 @@ class Main:
         return self.predictor.predict(model,X,y)
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("target", help="execution target (all, best or plot image)",choices=['all', 'best', 'image'], default='best')
+    args = parser.parse_args()
+
     m = Main()
-    print("### Running all models")
-    m.getAllPredictions()
 
-    print("### Running 2 best models")
+    if args.target == "image":
+        m.predictor.displayNumbers(m.X,m.y_labels)
+    if args.target == "all":
+        print("### Running all models")
+        m.getAllPredictions()
 
-    print("### Running SVM model with params (gamma 0.03, C=100)")
-    start = time.time()
-    clf = svm.SVC(gamma=0.03, C=100)
-    print("Score: {}, Total Time (s): {}".format(m.runPredictionByModel(clf,m.X,m.y_labels),time.time() - start))
+    if args.target == "all" or args.target == "best":
+        print("### Running 2 best models")
 
-    print("### Running SVM model with params (gamma 0.03, C=100) and PCA with 90% of variance")
-    start = time.time()
-    X_reduced_90,X_reconstructed_90 = m.PCA(0.9)
-    clf = svm.SVC(gamma=0.03, C=100)
-    print("Score: {}, Total Time (s): {}".format(m.runPredictionByModel(clf,X_reduced_90,m.y_labels),time.time() - start))
+        print("### Running SVM model with params (gamma 0.03, C=100)")
+        start = time.time()
+        clf = svm.SVC(gamma=0.03, C=100)
+        print("Score: {}, Total Time (s): {}".format(m.runPredictionByModel(clf,m.X,m.y_labels),time.time() - start))
 
-    print("### Running SVM model with params (gamma 0.03, C=100) and PCA with 50% of variance")
-    start = time.time()
-    X_reduced_50,X_reconstructed_50 = m.PCA(0.5)
-    clf = svm.SVC(gamma=0.03, C=100)
-    print("Score: {}, Total Time (s): {}".format(m.runPredictionByModel(clf,X_reduced_50,m.y_labels),time.time() - start))
+        print("### Running SVM model with params (gamma 0.03, C=100) and PCA with 90% of variance")
+        start = time.time()
+        X_reduced_90,X_reconstructed_90 = m.PCA(0.9)
+        clf = svm.SVC(gamma=0.03, C=100)
+        print("Score: {}, Total Time (s): {}".format(m.runPredictionByModel(clf,X_reduced_90,m.y_labels),time.time() - start))
 
-    print("### Running SVM model with params (gamma 0.03, C=100) and PCA with 10% of variance")
-    start = time.time()
-    X_reduced_10,X_reconstructed_10 = m.PCA(0.1)
-    clf = svm.SVC(gamma=0.03, C=100)
-    print("Score: {}, Total Time (s): {}".format(m.runPredictionByModel(clf,X_reduced_10,m.y_labels),time.time() - start))
+        print("### Running SVM model with params (gamma 0.03, C=100) and PCA with 50% of variance")
+        start = time.time()
+        X_reduced_50,X_reconstructed_50 = m.PCA(0.5)
+        clf = svm.SVC(gamma=0.03, C=100)
+        print("Score: {}, Total Time (s): {}".format(m.runPredictionByModel(clf,X_reduced_50,m.y_labels),time.time() - start))
 
-    print("### Running RandomForest model with params (n_estimators=500, max_features=log2)")
-    start = time.time()
-    clf = RandomForestClassifier(500,max_features="log2",max_depth=None)
-    print("Score: {}, Total Time (s): {}".format(m.runPredictionByModel(clf, m.X, m.y_labels), time.time() - start))
+        print("### Running SVM model with params (gamma 0.03, C=100) and PCA with 10% of variance")
+        start = time.time()
+        X_reduced_10,X_reconstructed_10 = m.PCA(0.1)
+        clf = svm.SVC(gamma=0.03, C=100)
+        print("Score: {}, Total Time (s): {}".format(m.runPredictionByModel(clf,X_reduced_10,m.y_labels),time.time() - start))
 
-    print("### Running RandomForest model with params (n_estimators=500, max_features=log2) and PCA with 90% of variance")
-    start = time.time()
-    clf = RandomForestClassifier(500,max_features="log2",max_depth=None)
-    print("Score: {}, Total Time (s): {}".format(m.runPredictionByModel(clf, X_reduced_90, m.y_labels), time.time() - start))
+        print("### Running RandomForest model with params (n_estimators=500, max_features=log2)")
+        start = time.time()
+        clf = RandomForestClassifier(500,max_features="log2",max_depth=None)
+        print("Score: {}, Total Time (s): {}".format(m.runPredictionByModel(clf, m.X, m.y_labels), time.time() - start))
 
-    print("### Running RandomForest model with params (n_estimators=500, max_features=log2) and PCA with 50% of variance")
-    start = time.time()
-    clf = RandomForestClassifier(500,max_features="log2",max_depth=None)
-    print("Score: {}, Total Time (s): {}".format(m.runPredictionByModel(clf, X_reduced_50, m.y_labels), time.time() - start))
+        print("### Running RandomForest model with params (n_estimators=500, max_features=log2) and PCA with 90% of variance")
+        start = time.time()
+        clf = RandomForestClassifier(500,max_features="log2",max_depth=None)
+        print("Score: {}, Total Time (s): {}".format(m.runPredictionByModel(clf, X_reduced_90, m.y_labels), time.time() - start))
 
-    print("### Running RandomForest model with params (n_estimators=500, max_features=log2) and PCA with 10% of variance")
-    start = time.time()
-    clf = RandomForestClassifier(500,max_features="log2",max_depth=None)
-    print("Score: {}, Total Time (s): {}".format(m.runPredictionByModel(clf, X_reduced_10, m.y_labels), time.time() - start))
+        print("### Running RandomForest model with params (n_estimators=500, max_features=log2) and PCA with 50% of variance")
+        start = time.time()
+        clf = RandomForestClassifier(500,max_features="log2",max_depth=None)
+        print("Score: {}, Total Time (s): {}".format(m.runPredictionByModel(clf, X_reduced_50, m.y_labels), time.time() - start))
+
+        print("### Running RandomForest model with params (n_estimators=500, max_features=log2) and PCA with 10% of variance")
+        start = time.time()
+        clf = RandomForestClassifier(500,max_features="log2",max_depth=None)
+        print("Score: {}, Total Time (s): {}".format(m.runPredictionByModel(clf, X_reduced_10, m.y_labels), time.time() - start))
 
 
