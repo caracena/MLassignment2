@@ -9,9 +9,10 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from sklearn import decomposition
 import pandas as pd
-import time, logging, operator
+import time, logging, operator, multiprocessing
 import sys,argparse
 import os.path
+from joblib import Parallel, delayed
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
 class Main:
@@ -25,7 +26,7 @@ class Main:
         logging.basicConfig(filename='results.log', level=logging.INFO)
         #predictor.displayNumbers(X,y_labels)
 
-        models = {}
+        models = []
 
         ## SVM configs
         svm_C = [0.1, 1, 10, 100]
@@ -34,7 +35,7 @@ class Main:
         svm_parameters = [(x, y, z) for x in svm_C for y in svm_gamma for z in svm_kernel]
 
         for params in svm_parameters:
-            models['SVM',params] = svm.SVC(gamma=params[1], C=params[0], kernel=params[2])
+            models.append(['SVM',params, svm.SVC(gamma=params[1], C=params[0], kernel=params[2])])
 
         ## random forest configs
         rf_nestimators = [10, 100, 300, 500]
@@ -43,9 +44,9 @@ class Main:
         rf_parameters = [(x, y, z) for x in rf_nestimators for y in rf_max_features for z in rf_max_depth]
 
         for params in rf_parameters:
-            models['RandomForest', params] = RandomForestClassifier(n_estimators=params[0],
+            models.append(['RandomForest', params, RandomForestClassifier(n_estimators=params[0],
                                                                     max_features=params[1],
-                                                                    max_depth=params[2], n_jobs = 4)
+                                                                    max_depth=params[2], n_jobs = 1)])
 
         ## adaboost configs
         ab_nestimators = [10, 100, 300, 500]
@@ -56,8 +57,8 @@ class Main:
         ab_parameters = [(x, y, z) for x in ab_nestimators for y in ab_learning_rate for z in ab_base_estimator]
 
         for params in ab_parameters:
-            models['AdaBoost', params] = AdaBoostClassifier(n_estimators = params[0], learning_rate= params[1],
-                                                            base_estimator=ab_base_estimator[2])
+            models.append(['AdaBoost', params, AdaBoostClassifier(n_estimators = params[0], learning_rate= params[1],
+                                                            base_estimator=ab_base_estimator[2])])
 
         ## decisiontrees configs
         dt_max_depth = [None, 2, 5]
@@ -65,24 +66,26 @@ class Main:
         dt_parameters = [(x, y) for x in dt_max_depth for y in dt_max_features]
 
         for params in dt_parameters:
-            models['DecisionTrees', params] = DecisionTreeClassifier(max_depth=params[0], max_features=params[1])
+            models.append(['DecisionTrees', params,
+                           DecisionTreeClassifier(max_depth=params[0], max_features=params[1])])
 
         ## MutinomialNB configs
         mnb_aplpha = [0.1, 0.3, 1]
 
         for params in mnb_aplpha:
-            models['MultinomialNB', params] = MultinomialNB(alpha=params)
+            models.append(['MultinomialNB', params, MultinomialNB(alpha=params)])
 
         ## GaussianNB configs
-        models['GaussianNB'] = GaussianNB()
+        models.append(['GaussianNB', '', GaussianNB()])
 
         ## LogisticRegression configs
         lr_C = [0.1, 1, 10, 100]
-        lr_multi_class = ['ovr', 'multinomial']
+        lr_multi_class = ['ovr']
         lr_parameters = [(x, y) for x in lr_C for y in lr_multi_class]
 
         for params in lr_parameters:
-            models['LogisticRegression', params] = LogisticRegression(C=params[0], multi_class=params[1], n_jobs=-1)
+            models.append(['LogisticRegression', params,
+                           LogisticRegression(C=params[0], multi_class=params[1])])
 
         ## KNeighborsClassifier configs
         knn_n_neighbors = [3, 5, 7]
@@ -91,7 +94,8 @@ class Main:
         knn_paramters = [(x, y, z) for x in knn_n_neighbors for y in knn_p for z in knn_algorithm]
 
         for params in knn_paramters:
-            models['KNeighbors', params] = KNeighborsClassifier(n_neighbors=params[0], p=params[1], algorithm=params[2], n_jobs=-1)
+            models.append(['KNeighbors', params,
+                           KNeighborsClassifier(n_neighbors=params[0], p=params[1], algorithm=params[2], n_jobs=1)])
 
 
         ## LinearDiscriminantAnalysis configs
@@ -100,23 +104,15 @@ class Main:
         lda_parameters = [(x, y) for x in lda_solver for y in lda_n_components]
 
         for params in lda_parameters:
-            models['LinearDiscriminantAnalysis', params] = LinearDiscriminantAnalysis(solver=params[0], n_components=params[1])
+            models.append(['LinearDiscriminantAnalysis', params,
+                           LinearDiscriminantAnalysis(solver=params[0], n_components=params[1])])
 
+        num_cores = multiprocessing.cpu_count()
+        results = Parallel(n_jobs=num_cores)\
+            (delayed(self.predictor.predict)(models[i][2], self.X, self.y_labels) for i in range(len(models)))
+        results_all = zip(models, results)
 
-        results_all = {}
-
-        for model in models.keys():
-            try:
-                start = time.time()
-                results = self.predictor.predict(models[model],self.X,self.y_labels)
-                results_all[model] = results
-                #print('accuracy for model {}: {} in {} secs'.format(model[0],model[1], results,time.time() - start))
-                logging.info('accuracy for model {}: {} in {} secs'.format(
-                    model[0], model[1], results, time.time() - start))
-            except:
-                print('error with {} and parameters {}'.format(model[0],model[1]))
-
-        sorted_results = sorted(results_all.items(), key=operator.itemgetter(1), reverse = True)
+        sorted_results = sorted(results_all, key= lambda item: item[1], reverse = True)
         [logging.info(x) for x in sorted_results]
 
 
@@ -141,7 +137,9 @@ if __name__ == "__main__":
         m.predictor.displayNumbers(m.X,m.y_labels)
     if args.target == "all":
         print("### Running all models")
+        start = time.time()
         m.getAllPredictions()
+        print('All models run in {} secs'.format(time.time() - start))
 
     if args.target == "all" or args.target == "best":
         print("### Running 2 best models")
