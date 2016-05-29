@@ -22,17 +22,6 @@ class Main:
         logging.basicConfig(filename='results.log', level=logging.INFO)
         #predictor.displayNumbers(X,y_labels)
 
-        models = [svm.SVC(gamma=0.01, C=100),
-                  RandomForestClassifier(n_estimators=500, max_features='auto', n_jobs = -1),
-                  AdaBoostClassifier(n_estimators=500),
-                  DecisionTreeClassifier(max_features ='auto' ,max_depth=5),
-                  MultinomialNB(),
-                  GaussianNB(),
-                  LogisticRegression(solver='lbfgs', multi_class = 'ovr', max_iter = 50 ,n_jobs = -1),
-                  KNeighborsClassifier(3, n_jobs = -1),
-                  LinearDiscriminantAnalysis()]
-
-
         models = {}
 
         ## SVM configs
